@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Enums\JobStatus;
+use App\Models\JobApplication;
 use App\Models\JobListing;
 use App\Repositories\Contracts\JobRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -52,6 +53,12 @@ class JobRepository implements JobRepositoryInterface
 
         if (! empty($filters['max_rate'])) {
             $query->where('hourly_rate', '<=', $filters['max_rate']);
+        }
+
+        if (! empty($filters['exclude_worker_id'])) {
+            $applied = JobApplication::where('worker_id', $filters['exclude_worker_id'])
+                ->pluck('job_listing_id');
+            $query->whereNotIn('id', $applied);
         }
 
         return $query->latest()->paginate($perPage);

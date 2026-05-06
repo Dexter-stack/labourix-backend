@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Resources\JobListingResource;
 use App\Services\JobService;
 use App\Traits\ApiResponse;
@@ -17,7 +18,13 @@ class JobSearchController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->only(['trade', 'location', 'skills', 'max_rate']);
-        $jobs    = $this->jobService->searchJobs($filters);
+
+        $user = auth('sanctum')->user();
+        if ($user && $user->role === UserRole::Worker) {
+            $filters['exclude_worker_id'] = $user->id;
+        }
+
+        $jobs = $this->jobService->searchJobs($filters);
 
         return $this->success(JobListingResource::collection($jobs), 'Jobs retrieved.');
     }
