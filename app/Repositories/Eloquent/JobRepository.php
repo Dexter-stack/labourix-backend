@@ -41,7 +41,7 @@ class JobRepository implements JobRepositoryInterface
         }
 
         if (! empty($filters['location'])) {
-            $query->where('location', 'ILIKE', "%{$filters['location']}%");
+            $query->where('location', 'LIKE', "%{$filters['location']}%");
         }
 
         if (! empty($filters['skills'])) {
@@ -61,7 +61,7 @@ class JobRepository implements JobRepositoryInterface
     {
         $query = JobListing::with(['employer'])
             ->where('status', JobStatus::Active)
-            ->where('location', 'ILIKE', "%{$location}%");
+            ->where('location', 'LIKE', "%{$location}%");
 
         foreach ($skills as $skill) {
             $query->whereJsonContains('required_skills', $skill);
@@ -85,8 +85,8 @@ class JobRepository implements JobRepositoryInterface
 
         if (! empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('title', 'ILIKE', "%{$filters['search']}%")
-                    ->orWhere('description', 'ILIKE', "%{$filters['search']}%");
+                $q->where('title', 'LIKE', "%{$filters['search']}%")
+                    ->orWhere('description', 'LIKE', "%{$filters['search']}%");
             });
         }
 

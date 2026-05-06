@@ -18,6 +18,8 @@ class WorkforceDemandForecast extends Model
         'confidence_score',
     ];
 
+    protected $appends = ['shortage'];
+
     protected function casts(): array
     {
         return [

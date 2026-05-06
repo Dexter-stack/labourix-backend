@@ -70,6 +70,6 @@ class JobListing extends Model
 
     public function scopeByLocation($query, string $location)
     {
-        return $query->where('location', 'ILIKE', "%{$location}%");
+        return $query->where('location', 'LIKE', "%{$location}%");
     }
 }

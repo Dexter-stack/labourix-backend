@@ -16,7 +16,6 @@ return new class extends Migration
             $table->date('forecast_date');
             $table->unsignedInteger('predicted_demand');
             $table->unsignedInteger('current_supply')->default(0);
-            $table->integer('shortage')->storedAs('predicted_demand - current_supply');
             $table->json('inputs')->nullable();
             $table->decimal('confidence_score', 5, 4)->nullable();
             $table->timestamps();

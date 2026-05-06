@@ -37,7 +37,7 @@ class WorkerRepository implements WorkerRepositoryInterface
     {
         $query = WorkerProfile::with(['user', 'certifications'])
             ->where('is_available', true)
-            ->where('location', 'ILIKE', "%{$location}%");
+            ->where('location', 'LIKE', "%{$location}%");
 
         foreach ($skills as $skill) {
             $query->whereJsonContains('skills', $skill);
