@@ -71,14 +71,14 @@ class BookingRepository implements BookingRepositoryInterface
 
         $earnings = Booking::where('worker_id', $workerId)
             ->where('status', BookingStatus::Completed->value)
-            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0) as total")
+            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * TIMESTAMPDIFF(HOUR, start_date, end_date)), 0) as total")
             ->value('total');
 
         $earningsThisMonth = Booking::where('worker_id', $workerId)
             ->where('status', BookingStatus::Completed->value)
             ->whereMonth('start_date', now()->month)
             ->whereYear('start_date', now()->year)
-            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0) as total")
+            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * TIMESTAMPDIFF(HOUR, start_date, end_date)), 0) as total")
             ->value('total');
 
         return [
@@ -103,20 +103,20 @@ class BookingRepository implements BookingRepositoryInterface
 
         $spend = Booking::where('employer_id', $employerId)
             ->where('status', BookingStatus::Completed->value)
-            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0) as total")
+            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * TIMESTAMPDIFF(HOUR, start_date, end_date)), 0) as total")
             ->value('total');
 
         $spendThisMonth = Booking::where('employer_id', $employerId)
             ->where('status', BookingStatus::Completed->value)
             ->whereMonth('start_date', now()->month)
             ->whereYear('start_date', now()->year)
-            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0) as total")
+            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * TIMESTAMPDIFF(HOUR, start_date, end_date)), 0) as total")
             ->value('total');
 
         $uniqueWorkers = Booking::where('employer_id', $employerId)
             ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Completed->value])
-            ->distinct('worker_id')
-            ->count('worker_id');
+            ->selectRaw('COUNT(DISTINCT worker_id) as count')
+            ->value('count') ?? 0;
 
         return [
             'counts' => [
@@ -139,7 +139,7 @@ class BookingRepository implements BookingRepositoryInterface
             ->toArray();
 
         $totalSpend = Booking::where('status', BookingStatus::Completed->value)
-            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * EXTRACT(EPOCH FROM (end_date - start_date)) / 3600), 0) as total")
+            ->selectRaw("COALESCE(SUM(agreed_hourly_rate * TIMESTAMPDIFF(HOUR, start_date, end_date)), 0) as total")
             ->value('total');
 
         return [
