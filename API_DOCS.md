@@ -582,7 +582,9 @@ Transitions a job from `draft` → `active`, making it visible in search and tri
 
 ### GET /employer/jobs/{job}/matched-workers
 
-Returns workers ranked by AI matching score for the job (skill match 40%, proximity 20%, availability 20%, rating 20%). Falls back to rule-based scoring if the AI service is unavailable.
+Returns workers ranked by AI matching score for the job. The ranking is powered by OpenAI (GPT-4o-mini by default) using the candidate's skills, trade, location, rating, and jobs completed relative to the job requirements. If the OpenAI call fails or times out, the endpoint falls back to rule-based scoring using the configured weights (skill match 40%, rating 20%).
+
+Only workers who are available, match the required skills and location, and are fully compliant with the job's required certifications are included as candidates before ranking.
 
 **Response `200`**
 ```json
@@ -1164,6 +1166,25 @@ Suspended accounts follow this behaviour:
 - **`POST /auth/logout`** — works; suspended users can still revoke their token
 - **All other authenticated routes** (`/employer/*`, `/worker/*`, `/admin/*`) — return `403 Your account has been suspended. Please contact support.`
 - **Only admins** can call `POST /admin/users/{user}/unsuspend` to lift a suspension
+
+### AI Integration
+
+Labourix uses a provider-interface pattern for all AI features, making the underlying model swappable without touching business logic.
+
+**Current provider:** OpenAI (`openai-php/laravel`)  
+**Default model:** `gpt-4o-mini` (override via `OPENAI_MODEL` env var)  
+**Configured via:** `AI_PROVIDER` and `OPENAI_API_KEY` environment variables
+
+**AI-powered features:**
+
+| Feature | Where triggered | Fallback |
+|---------|----------------|---------|
+| Worker matching | `GET /employer/jobs/{job}/matched-workers` and on job publish | Rule-based scoring (skill match 40%, rating 20%) |
+| Demand forecasting | `DemandForecastService` (internal) | Basic estimate using `project_size` param |
+
+**Adding a new provider:** Implement `App\AI\Contracts\AIProviderInterface` (single `chat()` method), register it in `AppServiceProvider`, and set `AI_PROVIDER` in `.env`. No changes to services or controllers are required.
+
+---
 
 ### File Uploads
 

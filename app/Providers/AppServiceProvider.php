@@ -18,6 +18,8 @@ use App\Listeners\NotifyWorkerOfConfirmation;
 use App\Listeners\SendComplianceAlert;
 use App\Listeners\TriggerAIMatching;
 use App\Listeners\UpdateApplicationOnBookingConfirmed;
+use App\AI\Contracts\AIProviderInterface;
+use App\AI\Providers\OpenAIProvider;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use App\Repositories\Contracts\CertificationRepositoryInterface;
 use App\Repositories\Contracts\JobApplicationRepositoryInterface;
@@ -32,11 +34,19 @@ use App\Repositories\Eloquent\UserRepository;
 use App\Repositories\Eloquent\WorkerRepository;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use OpenAI\Client as OpenAIClient;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(AIProviderInterface::class, function ($app) {
+            return match (config('labourix.ai.provider', 'openai')) {
+                'openai' => new OpenAIProvider($app->make(OpenAIClient::class)),
+                default  => new OpenAIProvider($app->make(OpenAIClient::class)),
+            };
+        });
+
         $this->app->bind(JobRepositoryInterface::class, JobRepository::class);
         $this->app->bind(WorkerRepositoryInterface::class, WorkerRepository::class);
         $this->app->bind(BookingRepositoryInterface::class, BookingRepository::class);

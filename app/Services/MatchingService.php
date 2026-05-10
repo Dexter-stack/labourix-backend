@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\AI\Contracts\AIProviderInterface;
 use App\Models\JobListing;
 use App\Repositories\Contracts\WorkerRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MatchingService
@@ -13,12 +13,9 @@ class MatchingService
     public function __construct(
         private WorkerRepositoryInterface $workerRepo,
         private ComplianceService $complianceService,
+        private AIProviderInterface $ai,
     ) {}
 
-    /**
-     * Returns a ranked collection of available workers for a job.
-     * Calls Python AI microservice; falls back to rule-based scoring on failure.
-     */
     public function getRankedWorkersForJob(JobListing $job): Collection
     {
         $candidates = $this->workerRepo->findAvailableBySkillsAndLocation(
@@ -31,29 +28,48 @@ class MatchingService
         );
 
         try {
-            return $this->scoreViaAiService($job, $candidates);
+            return $this->scoreViaAi($job, $candidates);
         } catch (\Throwable $e) {
-            Log::warning('AI matching service unavailable, using rule-based fallback', ['error' => $e->getMessage()]);
+            Log::warning('AI matching unavailable, using rule-based fallback', ['error' => $e->getMessage()]);
             return $this->ruleBasedScore($job, $candidates);
         }
     }
 
-    private function scoreViaAiService(JobListing $job, Collection $candidates): Collection
+    private function scoreViaAi(JobListing $job, Collection $candidates): Collection
     {
-        $url     = config('labourix.ai.matching_url');
-        $timeout = config('labourix.ai.timeout', 5);
+        $candidateList = $candidates->map(fn ($p) => [
+            'worker_profile_id' => $p->id,
+            'skills'            => $p->skills,
+            'trade'             => $p->trade,
+            'location'          => $p->location,
+            'average_rating'    => $p->average_rating,
+            'jobs_completed'    => $p->jobs_completed,
+        ])->values()->toArray();
 
-        $response = Http::timeout($timeout)->post($url, [
-            'job'        => $job->toArray(),
-            'candidates' => $candidates->map->toArray()->values(),
+        $content = $this->ai->chat([
+            [
+                'role'    => 'system',
+                'content' => 'You are a workforce matching AI for a construction platform. '
+                    . 'Return ONLY a valid JSON array of worker_profile_id integers, ranked best-first. '
+                    . 'No explanation, no markdown, just the JSON array.',
+            ],
+            [
+                'role'    => 'user',
+                'content' => 'Rank these candidates for the following job.'
+                    . "\n\nJob:\n" . json_encode($job->only([
+                        'title', 'trade', 'location', 'required_skills',
+                        'required_certifications', 'hourly_rate',
+                    ]))
+                    . "\n\nCandidates:\n" . json_encode($candidateList),
+            ],
         ]);
 
-        $response->throw();
-
-        $ranked = collect($response->json('ranked_candidates'));
+        $rankedIds = collect(json_decode($content, true));
 
         return $candidates->sortBy(fn ($profile) =>
-            $ranked->search(fn ($r) => $r['worker_profile_id'] === $profile->id)
+            $rankedIds->search($profile->id) !== false
+                ? $rankedIds->search($profile->id)
+                : PHP_INT_MAX
         )->values();
     }
 
@@ -62,13 +78,14 @@ class MatchingService
         $weights = config('labourix.matching.weights');
 
         return $candidates->map(function ($profile) use ($job, $weights) {
-            $skillScore = $this->skillMatchScore($profile->skills, $job->required_skills);
+            $skillScore  = $this->skillMatchScore($profile->skills, $job->required_skills);
             $ratingScore = min($profile->average_rating / 5, 1.0);
 
-            $score = ($skillScore * $weights['skill_match'])
-                + ($ratingScore * $weights['rating']);
+            $profile->match_score = round(
+                ($skillScore * $weights['skill_match']) + ($ratingScore * $weights['rating']),
+                4
+            );
 
-            $profile->match_score = round($score, 4);
             return $profile;
         })->sortByDesc('match_score')->values();
     }
@@ -79,7 +96,7 @@ class MatchingService
             return 1.0;
         }
 
-        $matched = count(array_intersect($workerSkills, $requiredSkills));
-        return $matched / count($requiredSkills);
+        $matched = \count(array_intersect($workerSkills, $requiredSkills));
+        return $matched / \count($requiredSkills);
     }
 }

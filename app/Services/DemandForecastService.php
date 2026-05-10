@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
+use App\AI\Contracts\AIProviderInterface;
 use App\Events\DemandForecastGenerated;
 use App\Models\User;
 use App\Models\WorkforceDemandForecast;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class DemandForecastService
 {
+    public function __construct(private AIProviderInterface $ai) {}
+
     public function generateForecast(User $employer, array $params): WorkforceDemandForecast
     {
         $forecastData = $this->fetchForecastFromAi($params);
@@ -32,15 +34,26 @@ class DemandForecastService
 
     private function fetchForecastFromAi(array $params): array
     {
-        $url     = config('labourix.ai.forecast_url');
-        $timeout = config('labourix.ai.timeout', 5);
-
         try {
-            $response = Http::timeout($timeout)->post($url, $params);
-            $response->throw();
-            return $response->json();
+            $content = $this->ai->chat([
+                [
+                    'role'    => 'system',
+                    'content' => 'You are a workforce demand forecasting AI for construction projects. '
+                        . 'Return ONLY a valid JSON object with these exact keys: '
+                        . 'forecast_date (ISO date string), predicted_demand (integer), '
+                        . 'current_supply (integer), confidence_score (float 0–1). '
+                        . 'No explanation, no markdown, just the JSON object.',
+                ],
+                [
+                    'role'    => 'user',
+                    'content' => 'Generate a workforce demand forecast for the following project parameters:'
+                        . "\n\n" . json_encode($params),
+                ],
+            ]);
+
+            return json_decode($content, true);
         } catch (\Throwable $e) {
-            Log::warning('AI forecast service unavailable, using basic estimate', ['error' => $e->getMessage()]);
+            Log::warning('AI forecast unavailable, using basic estimate', ['error' => $e->getMessage()]);
             return $this->basicForecastFallback($params);
         }
     }

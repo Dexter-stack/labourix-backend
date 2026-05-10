@@ -20,13 +20,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | AI Microservice Endpoints
+    | AI Provider
     |--------------------------------------------------------------------------
+    | Supported: "openai"  — add a new Provider class and case to
+    | AppServiceProvider to support additional providers in future.
     */
     'ai' => [
-        'matching_url' => env('AI_MATCHING_URL', 'http://ai-service:8001/api/match'),
-        'forecast_url' => env('AI_FORECAST_URL', 'http://ai-service:8001/api/forecast'),
-        'timeout'      => (int) env('AI_TIMEOUT', 5),
+        'provider' => env('AI_PROVIDER', 'openai'),
+
+        'openai' => [
+            'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        ],
     ],
 
     /*
