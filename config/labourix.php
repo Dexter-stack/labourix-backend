@@ -16,6 +16,7 @@ return [
             'rating'       => (float) env('MATCH_WEIGHT_RATING', 0.20),
         ],
         'fallback_rule_based' => true,
+        'cache_ttl_minutes'  => (int) env('AI_MATCH_CACHE_TTL', 60),
     ],
 
     /*

@@ -6,6 +6,7 @@ use App\AI\Contracts\AIProviderInterface;
 use App\Models\JobListing;
 use App\Repositories\Contracts\WorkerRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class MatchingService
@@ -37,34 +38,40 @@ class MatchingService
 
     private function scoreViaAi(JobListing $job, Collection $candidates): Collection
     {
-        $candidateList = $candidates->map(fn ($p) => [
-            'worker_profile_id' => $p->id,
-            'skills'            => $p->skills,
-            'trade'             => $p->trade,
-            'location'          => $p->location,
-            'average_rating'    => $p->average_rating,
-            'jobs_completed'    => $p->jobs_completed,
-        ])->values()->toArray();
+        $ttl = now()->addMinutes(config('labourix.matching.cache_ttl_minutes', 60));
 
-        $content = $this->ai->chat([
-            [
-                'role'    => 'system',
-                'content' => 'You are a workforce matching AI for a construction platform. '
-                    . 'Return ONLY a valid JSON array of worker_profile_id integers, ranked best-first. '
-                    . 'No explanation, no markdown, just the JSON array.',
-            ],
-            [
-                'role'    => 'user',
-                'content' => 'Rank these candidates for the following job.'
-                    . "\n\nJob:\n" . json_encode($job->only([
-                        'title', 'trade', 'location', 'required_skills',
-                        'required_certifications', 'hourly_rate',
-                    ]))
-                    . "\n\nCandidates:\n" . json_encode($candidateList),
-            ],
-        ]);
+        $rankedIds = collect(
+            Cache::remember("ai_match_job_{$job->id}", $ttl, function () use ($job, $candidates) {
+                $candidateList = $candidates->map(fn ($p) => [
+                    'worker_profile_id' => $p->id,
+                    'skills'            => $p->skills,
+                    'trade'             => $p->trade,
+                    'location'          => $p->location,
+                    'average_rating'    => $p->average_rating,
+                    'jobs_completed'    => $p->jobs_completed,
+                ])->values()->toArray();
 
-        $rankedIds = collect(json_decode($content, true));
+                $content = $this->ai->chat([
+                    [
+                        'role'    => 'system',
+                        'content' => 'You are a workforce matching AI for a construction platform. '
+                            . 'Return ONLY a valid JSON array of worker_profile_id integers, ranked best-first. '
+                            . 'No explanation, no markdown, just the JSON array.',
+                    ],
+                    [
+                        'role'    => 'user',
+                        'content' => 'Rank these candidates for the following job.'
+                            . "\n\nJob:\n" . json_encode($job->only([
+                                'title', 'trade', 'location', 'required_skills',
+                                'required_certifications', 'hourly_rate',
+                            ]))
+                            . "\n\nCandidates:\n" . json_encode($candidateList),
+                    ],
+                ]);
+
+                return json_decode($content, true) ?? [];
+            })
+        );
 
         return $candidates->sortBy(fn ($profile) =>
             $rankedIds->search($profile->id) !== false
