@@ -73,11 +73,20 @@ class MatchingService
             })
         );
 
-        return $candidates->sortBy(fn ($profile) =>
+        $sorted = $candidates->sortBy(fn ($profile) =>
             $rankedIds->search($profile->id) !== false
                 ? $rankedIds->search($profile->id)
                 : PHP_INT_MAX
         )->values();
+
+        $total = $sorted->count();
+
+        return $sorted->map(function ($profile, $index) use ($total) {
+            $profile->match_score = $total > 1
+                ? round(1 - ($index / ($total - 1)), 4)
+                : 1.0;
+            return $profile;
+        });
     }
 
     private function ruleBasedScore(JobListing $job, Collection $candidates): Collection
