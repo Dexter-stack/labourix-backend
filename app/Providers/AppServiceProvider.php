@@ -20,7 +20,7 @@ use App\Listeners\TriggerAIMatching;
 use App\Listeners\UpdateApplicationOnBookingConfirmed;
 use App\AI\Contracts\AIProviderInterface;
 use App\AI\Providers\OpenAIProvider;
-use OpenAI\OpenAI as OpenAIFactory;
+use OpenAI\Factory as OpenAIFactory;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use App\Repositories\Contracts\CertificationRepositoryInterface;
 use App\Repositories\Contracts\JobApplicationRepositoryInterface;
@@ -41,7 +41,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(AIProviderInterface::class, function () {
-            $client = OpenAIFactory::client(env('OPENAI_API_KEY', ''));
+            $client = (new OpenAIFactory())
+                ->withApiKey(env('OPENAI_API_KEY', ''))
+                ->make();
             return new OpenAIProvider($client);
         });
 
