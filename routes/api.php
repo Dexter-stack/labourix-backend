@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Employer\BookingController as EmployerBookingController;
 use App\Http\Controllers\Employer\JobController as EmployerJobController;
 use App\Http\Controllers\Employer\StatsController as EmployerStatsController;
+use App\Http\Controllers\Employer\WorkforceOptimisationController as EmployerWorkforceOptimisationController;
 use App\Http\Controllers\JobSearchController;
 use App\Http\Controllers\Worker\BookingController as WorkerBookingController;
 use App\Http\Controllers\Worker\CertificationController as WorkerCertificationController;
@@ -49,6 +50,7 @@ Route::prefix('v1')->group(function () {
         // Employer routes
         Route::prefix('employer')->middleware(['role:employer', 'suspended'])->group(function () {
             Route::get('stats', EmployerStatsController::class);
+            Route::get('workforce-optimisation', EmployerWorkforceOptimisationController::class);
 
             Route::apiResource('jobs', EmployerJobController::class);
             Route::post('jobs/{job}/publish', [EmployerJobController::class, 'publish']);

@@ -3,9 +3,11 @@
 namespace App\Repositories\Eloquent;
 
 use App\Enums\BookingStatus;
+use App\Enums\JobStatus;
 use App\Models\Booking;
 use App\Repositories\Contracts\BookingRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class BookingRepository implements BookingRepositoryInterface
 {
@@ -129,6 +131,39 @@ class BookingRepository implements BookingRepositoryInterface
             'spend_this_month'     => number_format((float) $spendThisMonth, 2, '.', ''),
             'unique_workers_hired' => $uniqueWorkers,
         ];
+    }
+
+    public function employerTradeUtilisation(int $employerId): array
+    {
+        return DB::table('job_listings as jl')
+            ->leftJoin('bookings as b', function ($join) {
+                $join->on('b.job_listing_id', '=', 'jl.id')
+                    ->whereIn('b.status', [BookingStatus::Confirmed->value, BookingStatus::Completed->value]);
+            })
+            ->where('jl.employer_id', $employerId)
+            ->whereIn('jl.status', [JobStatus::Active->value, JobStatus::Filled->value])
+            ->whereNull('jl.deleted_at')
+            ->select(
+                'jl.trade',
+                DB::raw('SUM(jl.workers_needed) as workers_needed'),
+                DB::raw('COUNT(b.id) as workers_booked'),
+                DB::raw('AVG(jl.hourly_rate) as avg_hourly_rate')
+            )
+            ->groupBy('jl.trade')
+            ->get()
+            ->map(function ($row) {
+                $needed = (int) $row->workers_needed;
+                $booked = (int) $row->workers_booked;
+                return [
+                    'trade'            => $row->trade,
+                    'workers_needed'   => $needed,
+                    'workers_booked'   => $booked,
+                    'utilisation_rate' => $needed > 0 ? round(($booked / $needed) * 100, 1) : 0.0,
+                    'avg_hourly_rate'  => number_format((float) $row->avg_hourly_rate, 2, '.', ''),
+                ];
+            })
+            ->values()
+            ->toArray();
     }
 
     public function platformBookingStats(): array

@@ -25,4 +25,6 @@ interface BookingRepositoryInterface
     public function employerBookingStats(int $employerId): array;
 
     public function platformBookingStats(): array;
+
+    public function employerTradeUtilisation(int $employerId): array;
 }
