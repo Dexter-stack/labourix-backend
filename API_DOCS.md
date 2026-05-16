@@ -453,6 +453,84 @@ Searches active job listings. All filters are optional.
 
 ---
 
+## Reference Data
+
+Public read-only lookup endpoints. No authentication required. Use these to populate dropdowns for trade selection and certification body fields during registration or job creation.
+
+### GET /trades
+
+**Auth required:** No (public)
+
+Returns all active trades. Optionally filter by category.
+
+**Query Parameters**
+| Parameter | Type | Notes |
+|-----------|------|-------|
+| `category` | string | `construction_building` or `engineering_technical` |
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "message": "Trades retrieved.",
+  "data": [
+    {
+      "id": 1,
+      "name": "Bricklayer/Brickie",
+      "slug": "bricklayer-brickie",
+      "category": "construction_building",
+      "category_label": "Construction & Building Trades"
+    },
+    {
+      "id": 15,
+      "name": "Welder",
+      "slug": "welder",
+      "category": "engineering_technical",
+      "category_label": "Engineering & Technical Trades"
+    }
+  ]
+}
+```
+
+**Error `422`** — invalid `category` value
+```json
+{ "success": false, "message": "The given data was invalid.", "errors": { "category": ["Invalid category. Must be construction_building or engineering_technical."] } }
+```
+
+---
+
+### GET /certification-bodies
+
+**Auth required:** No (public)
+
+Returns all active certification bodies, ordered alphabetically by name.
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "message": "Certification bodies retrieved.",
+  "data": [
+    {
+      "id": 5,
+      "name": "Chartered Institute of Plumbing and Heating Engineering",
+      "slug": "chartered-institute-of-plumbing-and-heating-engineering",
+      "abbreviation": "CIPHE"
+    },
+    {
+      "id": 1,
+      "name": "City & Guilds",
+      "slug": "city-guilds",
+      "abbreviation": "C&G"
+    }
+  ]
+}
+```
+
+---
+
+---
+
 ## Employer — Stats
 
 > Requires **Auth + Role: `employer`**
@@ -1124,7 +1202,7 @@ Lifts a suspension by clearing `suspended_at`. Only admins can call this endpoin
 
 | Endpoint Group | Required Role |
 |----------------|---------------|
-| Public (register, login, jobs search) | None |
+| Public (register, login, job search, trades, certification bodies) | None |
 | `/auth/logout`, `/auth/me` | Any authenticated user |
 | `/employer/stats` | `employer` |
 | `/employer/*` | `employer` |

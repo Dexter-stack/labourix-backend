@@ -7,7 +7,9 @@ use App\Http\Controllers\Employer\BookingController as EmployerBookingController
 use App\Http\Controllers\Employer\JobController as EmployerJobController;
 use App\Http\Controllers\Employer\StatsController as EmployerStatsController;
 use App\Http\Controllers\Employer\WorkforceOptimisationController as EmployerWorkforceOptimisationController;
+use App\Http\Controllers\CertificationBodyController;
 use App\Http\Controllers\JobSearchController;
+use App\Http\Controllers\TradeController;
 use App\Http\Controllers\Worker\BookingController as WorkerBookingController;
 use App\Http\Controllers\Worker\CertificationController as WorkerCertificationController;
 use App\Http\Controllers\Worker\JobApplicationController as WorkerJobApplicationController;
@@ -40,6 +42,8 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('jobs', [JobSearchController::class, 'index']);
+    Route::get('trades', [TradeController::class, 'index']);
+    Route::get('certification-bodies', [CertificationBodyController::class, 'index']);
 
     // Authenticated
     Route::middleware('auth:sanctum')->group(function () {

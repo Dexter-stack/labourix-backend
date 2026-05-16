@@ -22,15 +22,19 @@ use App\AI\Contracts\AIProviderInterface;
 use App\AI\Providers\OpenAIProvider;
 use OpenAI\Factory as OpenAIFactory;
 use App\Repositories\Contracts\BookingRepositoryInterface;
+use App\Repositories\Contracts\CertificationBodyRepositoryInterface;
 use App\Repositories\Contracts\CertificationRepositoryInterface;
 use App\Repositories\Contracts\JobApplicationRepositoryInterface;
 use App\Repositories\Contracts\JobRepositoryInterface;
+use App\Repositories\Contracts\TradeRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Contracts\WorkerRepositoryInterface;
 use App\Repositories\Eloquent\BookingRepository;
+use App\Repositories\Eloquent\CertificationBodyRepository;
 use App\Repositories\Eloquent\CertificationRepository;
 use App\Repositories\Eloquent\JobApplicationRepository;
 use App\Repositories\Eloquent\JobRepository;
+use App\Repositories\Eloquent\TradeRepository;
 use App\Repositories\Eloquent\UserRepository;
 use App\Repositories\Eloquent\WorkerRepository;
 use Illuminate\Support\Facades\Event;
@@ -53,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CertificationRepositoryInterface::class, CertificationRepository::class);
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(JobApplicationRepositoryInterface::class, JobApplicationRepository::class);
+        $this->app->bind(TradeRepositoryInterface::class, TradeRepository::class);
+        $this->app->bind(CertificationBodyRepositoryInterface::class, CertificationBodyRepository::class);
     }
 
     public function boot(): void
